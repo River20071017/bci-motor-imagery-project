@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>脑机接口（BCI）思维链路</title>
+<style>
+/* SECTION: base */
+:root{
+  --bg:#070b16;
+  --bg-soft:#0d1425;
+  --panel:#111a2e;
+  --panel-2:#16203a;
+  --line:#22304f;
+  --txt:#e8eefc;
+  --txt-dim:#9fb0d0;
+  --txt-mute:#6f80a3;
+  --c1:#4dd0e1;
+  --c2:#7c6cf0;
+  --c3:#f0a35e;
+  --c4:#5ad19a;
+  --c5:#ef6f9c;
+  --radius:14px;
+  --shadow:0 10px 30px rgba(0,0,0,.45);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--txt);font-family:"Segoe UI","PingFang SC","Microsoft YaHei",system-ui,sans-serif;line-height:1.65;-webkit-font-smoothing:antialiased}
+body{
+  background-image:
+    radial-gradient(900px 420px at 12% -6%,rgba(77,208,225,.16),transparent 62%),
+    radial-gradient(820px 400px at 92% 4%,rgba(124,108,240,.16),transparent 60%),
+    radial-gradient(700px 500px at 50% 108%,rgba(90,209,154,.09),transparent 65%);
+  background-attachment:fixed;
+}
+.wrap{max-width:1240px;margin:0 auto;padding:34px 22px 70px}
+a{color:var(--c1)}
+::selection{background:rgba(77,208,225,.3)}
+
+/* SECTION: header */
+.hero{position:relative;padding:34px 32px 30px;border:1px solid var(--line);border-radius:20px;background:linear-gradient(150deg,rgba(19,28,50,.92),rgba(9,14,26,.92));overflow:hidden;box-shadow:var(--shadow)}
+.hero:before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(120,150,200,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(120,150,200,.06) 1px,transparent 1px);background-size:38px 38px;pointer-events:none}
+.hero-inner{position:relative;z-index:2}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:12.5px;letter-spacing:.14em;color:var(--c1);text-transform:uppercase;border:1px solid rgba(77,208,225,.35);background:rgba(77,208,225,.08);padding:5px 12px;border-radius:999px;margin-bottom:16px}
+.eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--c1);box-shadow:0 0 0 4px rgba(77,208,225,.18);animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+h1{font-size:clamp(27px,4.4vw,42px);line-height:1.24;font-weight:800;letter-spacing:-.5px}
+h1 .accent{background:linear-gradient(92deg,var(--c1),var(--c2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.lede{margin-top:14px;max-width:820px;color:var(--txt-dim);font-size:15.5px}
+.eeg{display:block;width:100%;height:64px;margin-top:22px;opacity:.85}
+.eeg path{fill:none;stroke-width:1.8;stroke-linecap:round}
+
+/* SECTION: pipeline */
+.sec-title{display:flex;align-items:baseline;gap:12px;margin:46px 0 8px;flex-wrap:wrap}
+.sec-title h2{font-size:21px;font-weight:750;letter-spacing:-.2px}
+.sec-title .idx{font-size:12px;color:var(--txt-mute);letter-spacing:.16em;font-weight:700}
+.sec-sub{color:var(--txt-mute);font-size:13.5px;margin-bottom:20px}
+
+.layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:22px;align-items:start}
+.chain{display:flex;flex-direction:column;gap:12px}
+.node{position:relative;text-align:left;width:100%;border:1px solid var(--line);background:linear-gradient(140deg,var(--panel),var(--bg-soft));border-radius:var(--radius);padding:16px 18px 16px 62px;cursor:pointer;color:inherit;font:inherit;transition:border-color .2s,transform .18s,box-shadow .2s}
+.node:hover{transform:translateX(4px);border-color:rgba(120,150,200,.5)}
+.node:focus-visible{outline:2px solid var(--c1);outline-offset:3px}
+.node .num{position:absolute;left:16px;top:16px;width:32px;height:32px;border-radius:10px;display:grid;place-items:center;font-weight:800;font-size:14px;color:#06101f;background:var(--acc)}
+.node h3{font-size:16px;font-weight:720;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.node .en{font-size:11.5px;color:var(--txt-mute);font-weight:600;letter-spacing:.06em}
+.node p{margin-top:6px;font-size:13.2px;color:var(--txt-dim)}
+.node .tags{margin-top:11px;display:flex;gap:7px;flex-wrap:wrap}
+.chip{font-size:11.5px;font-weight:650;padding:3px 10px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.035);color:var(--txt-dim);transition:.18s}
+.node.active{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc),0 12px 30px rgba(0,0,0,.4)}
+.node.active .chip{border-color:var(--acc);color:var(--txt);background:rgba(255,255,255,.07)}
+.node.dim{opacity:.42}
+.arrow{height:16px;display:grid;place-items:center;color:var(--txt-mute);font-size:15px;opacity:.75}
+
+/* SECTION: detail panel */
+.detail{position:sticky;top:20px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(160deg,var(--panel-2),var(--panel));padding:22px;box-shadow:var(--shadow);min-height:340px}
+.detail .d-head{display:flex;align-items:center;gap:12px;padding-bottom:14px;border-bottom:1px dashed var(--line);margin-bottom:16px}
+.d-badge{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;font-weight:800;color:#06101f;background:var(--acc);flex:0 0 auto}
+.d-head h3{font-size:18px;font-weight:750}
+.d-head .en{font-size:11.5px;color:var(--txt-mute);letter-spacing:.08em;font-weight:600}
+.d-goal{font-size:13.8px;color:var(--txt-dim);margin-bottom:16px}
+.io{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;margin-bottom:18px}
+.io .box{border:1px solid var(--line);border-radius:11px;background:rgba(255,255,255,.03);padding:10px 12px;font-size:12.4px;color:var(--txt-dim)}
+.io .box b{display:block;font-size:10.5px;letter-spacing:.12em;color:var(--txt-mute);margin-bottom:3px;font-weight:700}
+.io .to{color:var(--acc);font-size:18px;font-weight:800}
+.tools{display:flex;flex-direction:column;gap:11px}
+.tool{border:1px solid var(--line);border-left:3px solid var(--acc);border-radius:11px;background:rgba(255,255,255,.028);padding:13px 15px}
+.tool .t-name{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-bottom:6px}
+.tool .t-name b{font-size:14.5px;font-weight:750;color:var(--txt)}
+.tool .t-kind{font-size:10.5px;font-weight:700;letter-spacing:.08em;padding:2px 8px;border-radius:6px;background:rgba(255,255,255,.07);color:var(--txt-dim)}
+.tool p{font-size:13px;color:var(--txt-dim)}
+.tool .why{margin-top:8px;font-size:12.4px;color:var(--txt-mute);border-top:1px dashed var(--line);padding-top:8px}
+.tool .why b{color:var(--acc);font-weight:700}
+.d-empty{color:var(--txt-mute);font-size:13.5px;text-align:center;padding:60px 10px}
+
+/* SECTION: tool matrix */
+.matrix{display:grid;grid-template-columns:repeat(auto-fit,minmax(238px,1fr));gap:13px;margin-top:6px}
+.mcard{border:1px solid var(--line);border-radius:13px;background:linear-gradient(150deg,var(--panel),var(--bg-soft));padding:15px 16px;cursor:pointer;text-align:left;color:inherit;font:inherit;transition:.2s}
+.mcard:hover{transform:translateY(-3px);border-color:rgba(120,150,200,.5)}
+.mcard:focus-visible{outline:2px solid var(--c1);outline-offset:3px}
+.mcard .m-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.mcard b{font-size:15px;font-weight:750}
+.mcard .stage{font-size:10.5px;font-weight:700;letter-spacing:.06em;padding:3px 8px;border-radius:999px;color:#06101f;background:var(--acc);white-space:nowrap}
+.mcard p{font-size:12.6px;color:var(--txt-dim)}
+.mcard .role{margin-top:9px;font-size:11.6px;color:var(--txt-mute)}
+.mcard.lit{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc)}
+
+/* SECTION: workflow demo */
+.flow{border:1px solid var(--line);border-radius:18px;background:linear-gradient(160deg,rgba(17,26,46,.9),rgba(9,14,26,.9));padding:22px;box-shadow:var(--shadow)}
+.flow-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:20px}
+.btn{border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--txt);font:inherit;font-size:13px;font-weight:650;padding:9px 17px;border-radius:10px;cursor:pointer;transition:.18s}
+.btn:hover{border-color:var(--c1);color:var(--c1)}
+.btn.primary{background:linear-gradient(92deg,var(--c1),var(--c2));border:none;color:#06101f;font-weight:780}
+.btn.primary:hover{filter:brightness(1.1);color:#06101f}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.progress{flex:1;min-width:140px;height:5px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
+.progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--c1),var(--c2));transition:width .45s ease}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.step{border:1px solid var(--line);border-radius:13px;background:rgba(255,255,255,.025);padding:15px;position:relative;transition:.35s}
+.step .s-idx{font-size:10.5px;font-weight:800;letter-spacing:.14em;color:var(--txt-mute)}
+.step h4{font-size:14.6px;font-weight:730;margin:6px 0 7px}
+.step p{font-size:12.4px;color:var(--txt-mute)}
+.step .uses{margin-top:10px;display:flex;gap:6px;flex-wrap:wrap}
+.step .uses span{font-size:10.8px;padding:2px 8px;border-radius:6px;background:rgba(255,255,255,.06);color:var(--txt-dim);font-weight:650}
+.step.on{border-color:var(--c1);background:rgba(77,208,225,.08);box-shadow:0 0 22px rgba(77,208,225,.16)}
+.step.on .s-idx{color:var(--c1)}
+.step.on p{color:var(--txt-dim)}
+.step.done{border-color:rgba(90,209,154,.5)}
+.step.done .s-idx{color:var(--c4)}
+.step.done:after{content:"✓";position:absolute;top:12px;right:13px;color:var(--c4);font-weight:800;font-size:14px}
+.flow-log{margin-top:18px;border-top:1px dashed var(--line);padding-top:14px;font-size:12.8px;color:var(--txt-dim);min-height:24px}
+.flow-log b{color:var(--c1)}
+
+/* SECTION: footer note */
+.note{margin-top:44px;border:1px solid var(--line);border-left:3px solid var(--c3);border-radius:12px;background:rgba(240,163,94,.06);padding:16px 18px;font-size:13.2px;color:var(--txt-dim)}
+.note b{color:var(--c3)}
+.foot{margin-top:30px;text-align:center;color:var(--txt-mute);font-size:12px}
+
+/* SECTION: responsive */
+@media (max-width:960px){
+  .layout{grid-template-columns:1fr}
+  .detail{position:static}
+  .steps{grid-template-columns:repeat(2,1fr)}
+}
+@media (max-width:600px){
+  .wrap{padding:22px 14px 54px}
+  .hero{padding:24px 20px}
+  .node{padding:14px 14px 14px 56px}
+  .steps{grid-template-columns:1fr}
+  .io{grid-template-columns:1fr}
+  .io .to{transform:rotate(90deg);justify-self:center}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- SECTION: header -->
+  <header class="hero">
+    <div class="hero-inner">
+      <span class="eyebrow"><span class="dot"></span>Brain-Computer Interface · 思维链路</span>
+      <h1>脑机接口（BCI）<span class="accent">机器学习工作流</span></h1>
+      <p class="lede">
+        BCI 旨在建立大脑与外部设备之间的<b>直接通信通道</b>，不依赖外周神经和肌肉组织。
+        核心流程是：采集脑电信号 → 处理与解码 → 转化为控制指令。下面这条链路把预处理、特征提取、分类决策与基准评估串成一个闭环，
+        点击任意阶段可查看该环节用到的工具与其作用原理。
+      </p>
+      <svg class="eeg" viewBox="0 0 1200 64" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M0,32 C40,32 55,10 80,10 C105,10 118,52 145,52 C172,52 185,22 215,22 C245,22 258,44 288,44 C318,44 330,14 362,14 C394,14 405,50 438,50 C471,50 482,26 515,26 C548,26 560,46 592,46 C624,46 636,12 670,12 C704,12 715,48 748,48 C781,48 793,24 826,24 C859,24 870,44 903,44 C936,44 948,16 982,16 C1016,16 1027,50 1060,50 C1093,50 1105,28 1138,28 C1163,28 1180,32 1200,32" stroke="#4dd0e1" opacity=".85"/>
+        <path d="M0,40 C60,40 90,56 150,56 C210,56 240,20 300,20 C360,20 390,54 450,54 C510,54 540,24 600,24 C660,24 690,52 750,52 C810,52 840,18 900,18 C960,18 990,50 1050,50 C1110,50 1150,40 1200,40" stroke="#7c6cf0" opacity=".55"/>
+      </svg>
+    </div>
+  </header>
+
+  <!-- SECTION: pipeline -->
+  <div class="sec-title"><span class="idx">01</span><h2>核心链路：五个阶段</h2></div>
+  <p class="sec-sub">从原始 EEG 信号到控制指令的完整数据流。点击左侧任一节点查看详情，或在下方工具矩阵中反向定位。</p>
+
+  <div class="layout">
+    <div class="chain" id="chain"></div>
+    <aside class="detail" id="detail" aria-live="polite">
+      <div class="d-empty">← 点击左侧任一阶段，查看该环节的工具与原理</div>
+    </aside>
+  </div>
+
+  <!-- SECTION: tool matrix -->
+  <div class="sec-title"><span class="idx">02</span><h2>工具速查矩阵</h2></div>
+  <p class="sec-sub">七个关键工具/方法在链路中的定位。点击任意工具，可高亮它所属的阶段。</p>
+  <div class="matrix" id="matrix"></div>
+
+  <!-- SECTION: workflow demo -->
+  <div class="sec-title"><span class="idx">03</span><h2>协同工作流演示</h2></div>
+  <p class="sec-sub">四步串起整条链路：数据准备 → 特征提取 → 分类决策 → 评估验证。</p>
+  <div class="flow">
+    <div class="flow-bar">
+      <button class="btn primary" id="runBtn" data-primary-action>▶ 播放完整链路</button>
+      <button class="btn" id="stepBtn">单步执行</button>
+      <button class="btn" id="resetBtn">重置</button>
+      <div class="progress"><i id="bar"></i></div>
+    </div>
+    <div class="steps" id="steps"></div>
+    <div class="flow-log" id="log">准备就绪：点击「播放完整链路」按顺序演示数据如何流经每一个环节。</div>
+  </div>
+
+  <!-- SECTION: footer note -->
+  <div class="note">
+    <b>链路本质：</b>传统路线是「手工特征 + 分类器」（CSP → LDA），而 EEGNet 走的是端到端深度学习路线，直接从原始 EEG 学习时空特征。
+    两条路线都需要在 MOABB 这样的标准化框架下、用 scikit-learn 提供的评估工具做公平比较，才能保证研究的可复现性。
+  </div>
+
+  <p class="foot">BCI 思维链路 · 内容依据用户提供的技术资料整理</p>
+</div>
+
+<script>
+/* SECTION: data */
+var STAGES = [
+  {
+    id:"s0", color:"#8fa3c8", num:"00",
+    title:"信号采集", en:"ACQUISITION",
+    brief:"建立大脑与外部设备的直接通信通道，不依赖外周神经和肌肉组织。",
+    goal:"这是整条链路的起点，也是 BCI 的最终目标所在：采集脑电信号 → 处理与解码 → 转化为控制指令。后续所有工具都是为这个目标服务的。",
+    input:"大脑神经活动", output:"原始 EEG 多通道信号",
+    tools:[
+      {name:"BCI 范式", kind:"目标定义",
+       desc:"以运动想象（Motor Imagery）等范式诱发可区分的脑状态，使信号中携带用户意图。",
+       why:"范式决定了后续该选哪类特征提取方法——CSP 就尤其适用于运动想象范式。"}
+    ]
+  },
+  {
+    id:"s1", color:"#4dd0e1", num:"01",
+    title:"数据预处理与清洗", en:"PREPROCESSING",
+    brief:"分析前先清洗原始 EEG，去除眼电、肌电等非脑源伪迹。",
+    goal:"原始 EEG 混杂大量伪迹，直接进入特征提取会严重污染判别信息。本阶段的目标是把「脑源信号」从混合信号中分离出来。",
+    input:"原始 EEG 数据", output:"去伪迹后的干净分段数据",
+    tools:[
+      {name:"ICA", kind:"盲源分离",
+       desc:"独立成分分析：把多通道 EEG 分解为统计上独立的成分，从而分离出眼电、肌电等非脑源伪迹并予以剔除。",
+       why:"是 EEG 预处理中非常常用的方法——伪迹与脑源活动在独立成分空间里往往可以被干净地拆开。"},
+      {name:"MNE-Python", kind:"工具库",
+       desc:"功能强大的 Python 库，用于处理、分析和可视化脑电（EEG）与脑磁（MEG）数据。",
+       why:"提供从数据读取、滤波、分段、ICA 去伪迹到可视化的完整预处理流程支持，是本阶段的主力框架。"}
+    ]
+  },
+  {
+    id:"s2", color:"#f0a35e", num:"02",
+    title:"特征提取", en:"FEATURE EXTRACTION",
+    brief:"从清洗后的信号中提取能区分不同大脑状态的特征。",
+    goal:"把高维、冗余的时序信号压缩为低维、具判别性的特征向量，让分类器的负担尽可能小。",
+    input:"干净的 EEG 分段", output:"判别性空间特征向量",
+    tools:[
+      {name:"CSP", kind:"空间滤波",
+       desc:"共空间模式：学习一组空间滤波器，使两类信号（如想象左手 vs. 右手运动）的方差差异最大化，从而提取最具判别性的特征。",
+       why:"尤其适用于运动想象范式；方差差异最大化正是运动想象中事件相关去同步/同步的物理体现。"}
+    ]
+  },
+  {
+    id:"s3", color:"#5ad19a", num:"03",
+    title:"分类决策", en:"CLASSIFICATION",
+    brief:"把特征送入分类器，判断用户意图并转化为控制指令。",
+    goal:"这是从「特征」到「决策」的关键一跃。存在两条并行路线：经典的手工特征 + 线性分类器，以及端到端深度学习。",
+    input:"CSP 特征 / 原始 EEG", output:"意图标签（控制指令）",
+    tools:[
+      {name:"LDA", kind:"经典线性分类器",
+       desc:"线性判别分析：把高维特征投影到低维空间，使不同类别的数据尽可能分开。",
+       why:"简单高效，常与 CSP 结合（CSP + LDA），是 BCI 领域非常经典的基线方法。"},
+      {name:"EEGNet", kind:"轻量深度学习",
+       desc:"专为 EEG 解码设计的轻量级深度模型，可直接从原始 EEG 端到端学习时空特征，跳过手工特征环节。",
+       why:"结构紧凑、参数少，同时具备较好的可解释性，是深度学习在 BCI 应用中的代表性模型。"}
+    ]
+  },
+  {
+    id:"s4", color:"#ef6f9c", num:"04",
+    title:"基准测试与评估", en:"BENCHMARKING",
+    brief:"在标准化框架下公平比较整个流程的性能，保证可复现性。",
+    goal:"研究价值取决于比较是否公平、结果能否复现。本阶段为前四个环节提供统一的评估口径。",
+    input:"完整 pipeline + 公开数据集", output:"可复现的性能对比结果",
+    tools:[
+      {name:"MOABB", kind:"基准框架",
+       desc:"Mother of All BCI Benchmarks：社区驱动的开源 Python 工具包，在大量公开 EEG 数据集上对 BCI 算法做标准化基准测试。",
+       why:"集成了多种数据集、范式和评估流程，旨在提供公平、可复现的比较基线。"},
+      {name:"scikit-learn", kind:"通用 ML 库",
+       desc:"Python 中最流行的通用机器学习库，提供 LDA、SVM 等分类器以及数据预处理、模型评估工具。",
+       why:"是构建 BCI 分类流程的基础组件——CSP、LDA 等算法通常都通过 scikit-learn 的接口来调用和组合。"}
+    ]
+  }
+];
+
+var FLOW = [
+  {idx:"STEP 1", title:"数据准备", desc:"加载并整理 EEG 数据，用 ICA 完成去伪迹清洗。", uses:["MNE-Python","ICA"], stage:"s1",
+   log:"用 <b>MNE-Python</b> 读取原始 EEG，滤波、分段后跑 <b>ICA</b>，剔除眼电与肌电成分。"},
+  {idx:"STEP 2", title:"特征提取", desc:"对清洗后的数据应用 CSP，提取具判别性的空间特征。", uses:["CSP"], stage:"s2",
+   log:"对干净分段数据应用 <b>CSP</b>，让两类运动想象的方差差异最大化，得到低维特征向量。"},
+  {idx:"STEP 3", title:"分类决策", desc:"将 CSP 特征输入 LDA（或直接用 EEGNet）判断用户意图。", uses:["LDA","EEGNet"], stage:"s3",
+   log:"特征送入 <b>LDA</b> 得到意图标签；深度学习路线则由 <b>EEGNet</b> 从原始信号端到端输出。"},
+  {idx:"STEP 4", title:"评估验证", desc:"在 MOABB 框架下用 scikit-learn 工具公平评估整个流程。", uses:["MOABB","scikit-learn"], stage:"s4",
+   log:"在 <b>MOABB</b> 标准化框架下跑多个公开数据集，用 <b>scikit-learn</b> 的评估工具横向对比性能。"}
+];
+
+var TOOL_STAGE = {
+  "ICA":"s1","MNE-Python":"s1","CSP":"s2","LDA":"s3","EEGNet":"s3","MOABB":"s4","scikit-learn":"s4"
+};
+var STAGE_LABEL = {s1:"预处理",s2:"特征提取",s3:"分类",s4:"评估"};
+var TOOL_ROLE = {
+  "ICA":"盲源分离去伪迹，把非脑源成分从混合信号中拆出来",
+  "MNE-Python":"EEG/MEG 全流程处理与可视化库",
+  "CSP":"空间滤波，最大化两类信号的方差差异",
+  "LDA":"经典线性分类器，CSP + LDA 是标准基线",
+  "EEGNet":"轻量端到端深度模型，直接学习时空特征",
+  "MOABB":"社区驱动的标准化 BCI 基准测试框架",
+  "scikit-learn":"通用 ML 基础组件，提供分类器与评估工具"
+};
+
+/* SECTION: render chain */
+var chainEl = document.getElementById("chain");
+var detailEl = document.getElementById("detail");
+var matrixEl = document.getElementById("matrix");
+var activeStage = null;
+
+STAGES.forEach(function(s, i){
+  var b = document.createElement("button");
+  b.className = "node";
+  b.type = "button";
+  b.dataset.stage = s.id;
+  b.style.setProperty("--acc", s.color);
+  b.setAttribute("aria-expanded","false");
+  var tags = s.tools.map(function(t){ return '<span class="chip">'+t.name+'</span>'; }).join("");
+  b.innerHTML =
+    '<span class="num">'+s.num+'</span>'+
+    '<h3>'+s.title+' <span class="en">'+s.en+'</span></h3>'+
+    '<p>'+s.brief+'</p>'+
+    '<div class="tags">'+tags+'</div>';
+  b.addEventListener("click", function(){ selectStage(s.id); });
+  chainEl.appendChild(b);
+  if(i < STAGES.length-1){
+    var a = document.createElement("div");
+    a.className = "arrow"; a.textContent = "↓"; a.setAttribute("aria-hidden","true");
+    chainEl.appendChild(a);
+  }
+});
+
+function selectStage(id){
+  var s = STAGES.filter(function(x){ return x.id===id; })[0];
+  if(!s) return;
+  activeStage = id;
+  [].forEach.call(chainEl.querySelectorAll(".node"), function(n){
+    var on = n.dataset.stage === id;
+    n.classList.toggle("active", on);
+    n.classList.toggle("dim", !on);
+    n.setAttribute("aria-expanded", on ? "true" : "false");
+  });
+  detailEl.style.setProperty("--acc", s.color);
+  var tools = s.tools.map(function(t){
+    return '<div class="tool">'+
+      '<div class="t-name"><b>'+t.name+'</b><span class="t-kind">'+t.kind+'</span></div>'+
+      '<p>'+t.desc+'</p>'+
+      '<div class="why"><b>为什么在这一步：</b>'+t.why+'</div>'+
+    '</div>';
+  }).join("");
+  detailEl.innerHTML =
+    '<div class="d-head"><span class="d-badge">'+s.num+'</span>'+
+      '<div><h3>'+s.title+'</h3><div class="en">'+s.en+'</div></div></div>'+
+    '<p class="d-goal">'+s.goal+'</p>'+
+    '<div class="io">'+
+      '<div class="box"><b>输入</b>'+s.input+'</div>'+
+      '<div class="to">→</div>'+
+      '<div class="box"><b>输出</b>'+s.output+'</div>'+
+    '</div>'+
+    '<div class="tools">'+tools+'</div>';
+}
+
+/* SECTION: render matrix */
+Object.keys(TOOL_STAGE).forEach(function(name){
+  var sid = TOOL_STAGE[name];
+  var s = STAGES.filter(function(x){ return x.id===sid; })[0];
+  var c = document.createElement("button");
+  c.className = "mcard";
+  c.type = "button";
+  c.dataset.tool = name;
+  c.dataset.stage = sid;
+  c.style.setProperty("--acc", s.color);
+  c.innerHTML =
+    '<div class="m-top"><b>'+name+'</b><span class="stage">'+s.num+' '+STAGE_LABEL[sid]+'</span></div>'+
+    '<p>'+TOOL_ROLE[name]+'</p>'+
+    '<div class="role">点击定位到所属阶段 →</div>';
+  c.addEventListener("click", function(){
+    selectStage(sid);
+    [].forEach.call(matrixEl.children, function(x){ x.classList.remove("lit"); });
+    c.classList.add("lit");
+    document.getElementById("chain").scrollIntoView({behavior:"smooth", block:"center"});
+  });
+  matrixEl.appendChild(c);
+});
+
+/* SECTION: flow demo */
+var stepsEl = document.getElementById("steps");
+var logEl = document.getElementById("log");
+var barEl = document.getElementById("bar");
+var runBtn = document.getElementById("runBtn");
+var stepBtn = document.getElementById("stepBtn");
+var resetBtn = document.getElementById("resetBtn");
+var cursor = 0, timer = null;
+
+FLOW.forEach(function(f, i){
+  var s = STAGES.filter(function(x){ return x.id===f.stage; })[0];
+  var d = document.createElement("div");
+  d.className = "step";
+  d.dataset.i = i;
+  d.style.setProperty("--acc", s.color);
+  d.innerHTML =
+    '<div class="s-idx">'+f.idx+'</div>'+
+    '<h4>'+f.title+'</h4>'+
+    '<p>'+f.desc+'</p>'+
+    '<div class="uses">'+f.uses.map(function(u){ return '<span>'+u+'</span>'; }).join("")+'</div>';
+  stepsEl.appendChild(d);
+});
+
+function paint(){
+  [].forEach.call(stepsEl.children, function(el, i){
+    el.classList.toggle("on", i === cursor);
+    el.classList.toggle("done", i < cursor);
+  });
+  barEl.style.width = (cursor / FLOW.length * 100) + "%";
+  runBtn.disabled = cursor >= FLOW.length;
+  stepBtn.disabled = cursor >= FLOW.length;
+}
+
+function advance(){
+  if(cursor >= FLOW.length){ stop(); return; }
+  var f = FLOW[cursor];
+  logEl.innerHTML = '<b>'+f.idx+' · '+f.title+'：</b>'+f.log;
+  selectStage(f.stage);
+  cursor++;
+  paint();
+  if(cursor >= FLOW.length){
+    stop();
+    setTimeout(function(){
+      logEl.innerHTML += ' <b>链路完成</b>：从原始 EEG 到可复现的性能对比，四个环节全部走通。';
+    }, 260);
+  }
+}
+
+function stop(){ if(timer){ clearInterval(timer); timer = null; } }
+
+runBtn.addEventListener("click", function(){
+  stop();
+  if(cursor >= FLOW.length) reset();
+  advance();
+  timer = setInterval(advance, 1900);
+});
+stepBtn.addEventListener("click", function(){ stop(); advance(); });
+resetBtn.addEventListener("click", function(){ reset(); });
+
+function reset(){
+  stop();
+  cursor = 0;
+  paint();
+  logEl.textContent = "已重置：点击「播放完整链路」按顺序演示数据如何流经每一个环节。";
+  [].forEach.call(chainEl.querySelectorAll(".node"), function(n){
+    n.classList.remove("dim");
+  });
+}
+
+/* SECTION: init */
+selectStage("s1");
+[].forEach.call(chainEl.querySelectorAll(".node"), function(n){ n.classList.remove("dim"); });
+paint();
+</script>
+</body>
+</html>
